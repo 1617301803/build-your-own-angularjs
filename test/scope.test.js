@@ -1,12 +1,20 @@
-import chai from 'chai';
-import {Scope} from '../src/Scope.js';
+import { Scope } from '../src/Scope.js';
 
-var expect = chai.expect;
-describe('Scope', function () {
-    it('test scope', () => {
-        var scope = new Scope();
-        scope.a = 1;
 
-        expect(scope.a).to.be.equal(1);
-    })
+describe('Scope', () => {
+    var scope;
+
+    beforeEach(() => {
+        scope = new Scope();
+    });
+
+    test('scope', () => {
+        const watchFn = () => 'watch';
+        const listenerFn = jest.fn();
+        scope.$watch(watchFn, listenerFn);
+
+        scope.$digest();
+
+        expect(listenerFn).toHaveBeenCalled();
+    });
 });
