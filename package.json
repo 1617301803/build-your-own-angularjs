@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "eslint": "eslint  ./src --fix",
-    "test": "jest"
+    "test": "jest",
+    "build": "webpack"
   },
   "author": "",
   "license": "ISC",
@@ -19,8 +20,11 @@
     "eslint-plugin-node": "^6.0.1",
     "eslint-plugin-promise": "^3.7.0",
     "eslint-plugin-standard": "^3.0.1",
+    "html-webpack-plugin": "^3.0.6",
     "jest": "^22.4.2",
-    "regenerator-runtime": "^0.11.1"
+    "regenerator-runtime": "^0.11.1",
+    "webpack": "^4.1.1",
+    "webpack-cli": "^2.0.12"
   },
   "dependencies": {
     "lodash": "^4.17.5"
