@@ -158,7 +158,7 @@ describe('Scope', () => {
         expect(watchExecutions).toBe(301);
     });
 
-    test('does not enddigest so that new watches are not run', () => {
+    test.skip('does not enddigest so that new watches are not run', () => {
         scope.aValue = 'abc';
         scope.counter = 0;
 
@@ -188,7 +188,7 @@ describe('Scope', () => {
         expect(scope.counter).toBe(3);
     });
 
-    test.only('compares based on value if enabled', () => {
+    test('compares based on value if enabled', () => {
         scope.aValue = [1, 2, 3];
         scope.counter = 0;
 
@@ -208,5 +208,41 @@ describe('Scope', () => {
         scope.aValue.push(4);
         scope.$digest();
         expect(scope.counter).toBe(2);
+    });
+
+    test('correctly handles NaNs', () => {
+        scope.number = 0 / 0;
+        scope.counter = 0;
+
+        scope.$watch(
+            (scope) => {
+                return scope.number;
+            },
+            (newValue, oldValue, scope) => {
+                scope.counter++;
+            }
+        );
+
+        scope.$digest();
+        expect(scope.counter).toBe(1);
+
+        scope.$digest();
+        expect(scope.counter).toBe(1);
+    });
+
+    test('execute $eval function and returns result', () => {
+        scope.aValue = 42;
+
+        let result = scope.$eval((scope) => {
+            return scope.aValue;
+        });
+
+        expect(result).toBe(42);
+
+        let addResult = scope.$eval((scope, arg) => {
+            return scope.aValue + arg;
+        }, 2);
+
+        expect(addResult).toBe(44);
     });
 });
