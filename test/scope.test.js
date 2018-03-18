@@ -5,6 +5,15 @@ import { Scope } from '../src/Scope.js';
 describe('Scope', () => {
     let scope;
 
+    // scope.$watch(
+    //     (scope) => {
+    //         return scope.number;
+    //     },
+    //     (newValue, oldValue, scope) => {
+    //         scope.counter++;
+    //     }
+    // );
+
     beforeEach(() => {
         scope = new Scope();
     });
@@ -244,5 +253,27 @@ describe('Scope', () => {
         }, 2);
 
         expect(addResult).toBe(44);
+    });
+
+    test('executes $apply function and starts the digest', () => {
+        scope.aValue = 'someValue';
+        scope.counter = 0;
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.counter++;
+            }
+        );
+
+        scope.$digest();
+        expect(scope.counter).toBe(1);
+
+        scope.$apply((scope) => {
+            scope.aValue = 'someOtherValue';
+        });
+        expect(scope.counter).toBe(2);
     });
 });
