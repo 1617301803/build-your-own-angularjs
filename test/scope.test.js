@@ -276,4 +276,26 @@ describe('Scope', () => {
         });
         expect(scope.counter).toBe(2);
     });
+
+    test('executes $evalAsync function later in the same cycle', () => {
+        scope.aValue = [1, 2, 3];
+        scope.asyncEvaluated = false;
+        scope.asyncEvaluatedInnediately = false;
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.$evalAsync((scope) => {
+                    scope.asyncEvaluated = true;
+                });
+                scope.asyncEvaluatedInnediately = scope.asyncEvaluated;
+            }
+        );
+
+        scope.$digest();
+        expect(scope.asyncEvaluated).toBe(true);
+        expect(scope.asyncEvaluatedInnediately).toBe(false);
+    });
 });
