@@ -1,7 +1,6 @@
 import _ from 'lodash';
 import { Scope } from '../src/Scope.js';
 
-
 describe('Scope', () => {
     let scope;
 
@@ -320,7 +319,7 @@ describe('Scope', () => {
         expect(scope.asyncEvaluated).toBe(true);
     });
 
-    test('executes #evalAsync functions even when not dirty', () => {
+    test('executes $evalAsync functions even when not dirty', () => {
         scope.aValue = [1, 2, 3];
         scope.asyncEvaluatedTimes = 0;
 
@@ -355,5 +354,53 @@ describe('Scope', () => {
         );
 
         expect(() => { scope.$digest() }).toThrow();
-    })
+    });
+
+    test('has a $$phase filed whose value is the current digest phase', () => {
+        scope.aValue = [1, 2, 3];
+        scope.phaseInWatchFunction = undefined;
+        scope.phaseInListenerFunction = undefined;
+        scope.phaseInApplyFunction = undefined;
+
+        scope.$watch(
+            (scope) => {
+                scope.phaseInWatchFunction = scope.$$phase;
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.phaseInListenerFunction = scope.$$phase;
+            }
+        );
+
+        scope.$apply((scope) => {
+            scope.phaseInApplyFunction = scope.$$phase;
+        });
+
+        expect(scope.phaseInWatchFunction).toBe('$digest');
+        expect(scope.phaseInListenerFunction).toBe('$digest');
+        expect(scope.phaseInApplyFunction).toBe('$apply');
+    });
+
+    test('schedules a digest in $evalAstnc', (done) => {
+        scope.aValue = 'abc';
+        scope.counter = 0;
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.counter++;
+            }
+        );
+
+        scope.$evalAsync((scope) => {
+        });
+
+        expect(scope.counter).toBe(0);
+        setTimeout(() => {
+            expect(scope.counter).toBe(1);
+            done();
+        }, 50);
+    });
 });;
