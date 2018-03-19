@@ -10,6 +10,7 @@ export function Scope() {
     this.$$asyncQuene = [];
     this.$$applyAsyncQueue = [];
     this.$$applyAsyncId = null;
+    this.$$postDigestQueue = [];
     this.$$phase = null;
 }
 
@@ -24,6 +25,16 @@ Scope.prototype.$watch = function (watchFn, listenerFn, valueEq) {
 
     this.$$watchers.push(watcher);
     this.$$lastDirtyWatch = null;
+};
+
+Scope.prototype.$$areEqual = function (newValue, oldValue, valueEq) {
+    if (valueEq) {
+        return _.isEqual(newValue, oldValue);
+    } else {
+        return newValue === oldValue ||
+            (typeof newValue === 'number' && typeof oldValue === 'number' &&
+                isNaN(newValue) && isNaN(newValue));
+    }
 };
 
 Scope.prototype.$$digestOnce = function () {
@@ -69,15 +80,9 @@ Scope.prototype.$digest = function () {
         }
     } while (dirty || this.$$asyncQuene.length);
     this.$clearPhase();
-};
 
-Scope.prototype.$$areEqual = function (newValue, oldValue, valueEq) {
-    if (valueEq) {
-        return _.isEqual(newValue, oldValue);
-    } else {
-        return newValue === oldValue ||
-            (typeof newValue === 'number' && typeof oldValue === 'number' &&
-                isNaN(newValue) && isNaN(newValue));
+    while (this.$$postDigestQueue.length) {
+        this.$$postDigestQueue.shift()();
     }
 };
 
@@ -136,4 +141,8 @@ Scope.prototype.$beginPhase = function (phase) {
 
 Scope.prototype.$clearPhase = function () {
     this.$$phase = null;
+};
+
+Scope.prototype.$$postDigest = function (fn) {
+    this.$$postDigestQueue.push(fn);
 };
