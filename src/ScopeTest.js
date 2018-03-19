@@ -1,31 +1,26 @@
 
 import { Scope } from './Scope';
+import { expect } from './expect';
 
 let scope = new Scope();
 
 
-scope.aValue = 'abc';
-scope.counter = 0;
+scope.aValue = [1, 2, 3];
+scope.asyncEvaluated = false;
+scope.asyncEvaluatedInnediately = false;
 
 scope.$watch(
-    () => {
+    (scope) => {
         return scope.aValue;
     },
     (newValue, oldValue, scope) => {
-        scope.$watch(
-            () => {
-                return scope.aValue;
-            },
-            (newValue, oldValue, scope) => {
-                scope.counter++;
-            }
-        );
+        scope.$evalAsync((scope) => {
+            scope.asyncEvaluated = true;
+        });
+        scope.asyncEvaluatedInnediately = scope.asyncEvaluated;
     }
 );
 
 scope.$digest();
-//expect(scope.counter).toBe(1);
-
-scope.aValue = 'a';
-scope.$digest();
-//expect(scope.counter).toBe(3);
+expect(scope.asyncEvaluated).toBe(true);
+expect(scope.asyncEvaluatedInnediately).toBe(false);

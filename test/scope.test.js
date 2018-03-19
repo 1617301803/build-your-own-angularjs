@@ -298,4 +298,62 @@ describe('Scope', () => {
         expect(scope.asyncEvaluated).toBe(true);
         expect(scope.asyncEvaluatedInnediately).toBe(false);
     });
-});
+
+    test('execute $evalAsync function added by watch function', () => {
+        scope.aValue = [1, 2, 3];
+        scope.asyncEvaluated = false;
+
+        scope.$watch(
+            (scope) => {
+                if (!scope.asyncEvaluated) {
+                    scope.$evalAsync(() => {
+                        scope.asyncEvaluated = true;
+                    })
+                }
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => { }
+        );
+
+        scope.$digest();
+
+        expect(scope.asyncEvaluated).toBe(true);
+    });
+
+    test('executes #evalAsync functions even when not dirty', () => {
+        scope.aValue = [1, 2, 3];
+        scope.asyncEvaluatedTimes = 0;
+
+        scope.$watch(
+            (scope) => {
+                if (scope.asyncEvaluatedTimes < 2) {
+                    scope.$evalAsync(() => {
+                        scope.asyncEvaluatedTimes++;
+                    });
+                }
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => { }
+        );
+
+        scope.$digest();
+
+        expect(scope.asyncEvaluatedTimes).toBe(2);
+    });
+
+    test('eventually halts $evalAsyncs added by watches', function () {
+        scope.aValue = [1, 2, 3];
+
+        scope.$watch(
+            (scope) => {
+                scope.$evalAsync(() => {
+                    scope.asyncEvaluatedTimes++;
+                });
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => { }
+        );
+
+        expect(() => { scope.$digest() }).toThrow();
+    })
+});;
