@@ -547,4 +547,111 @@ describe('Scope', () => {
         scope.$digest();
         expect(scope.watchedValue).toBe('changed value');
     });
+
+    test('catches exceptions in watch functions and continues', () => {
+        scope.aValue = 'abc';
+        scope.counter = 0;
+
+        scope.$watch(
+            (scope) => {
+                throw 'error';
+            },
+            (newValue, oldValue, scope) => { }
+        );
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.counter++;
+            }
+        );
+
+        scope.$digest();
+        expect(scope.counter).toBe(1);
+    });
+
+    test('catches exceptions in listener functions and continues', () => {
+        scope.aValue = 'abc';
+        scope.counter = 0;
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                throw 'error';
+            }
+        );
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.counter++;
+            }
+        );
+
+        scope.$digest();
+        expect(scope.counter).toBe(1);
+    });
+
+    test('catches excetions in $evalAsync', (done) => {
+        scope.aValue = 'abc';
+        scope.counter = 0;
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.counter++;
+            }
+        );
+
+        scope.$evalAsync(() => {
+            throw 'error';
+        });
+
+        setTimeout(() => {
+            expect(scope.counter).toBe(1);
+            done();
+        }, 50);
+    });
+
+    test('catches excetions in $applyAsync', (done) => {
+        scope.$applyAsync(() => {
+            throw 'error';
+        });
+
+        scope.$applyAsync(() => {
+            throw 'error';
+        });
+
+        scope.$applyAsync(() => {
+            scope.applied = true;
+        });
+
+        setTimeout(() => {
+            expect(scope.applied).toBe(true);
+            done();
+        }, 50);
+    });
+
+    test('catches excetions in $postDigest",', () => {
+        let didRun = false;
+
+        scope.$$postDigest(() => {
+            throw 'error';
+        });
+
+        scope.$$postDigest(() => {
+            didRun = true;
+        });
+
+        scope.$digest();
+        expect(didRun).toBe(true);
+    });
 });
