@@ -8,6 +8,8 @@ export function Scope() {
     this.$$watchers = [];
     this.$$lastDirtyWatch = null;
     this.$$asyncQuene = [];
+    this.$$applyAsyncQueue = [];
+    this.$$applyAsyncId = null;
     this.$$phase = null;
 }
 
@@ -49,6 +51,12 @@ Scope.prototype.$digest = function () {
     let dirty;
     this.$$lastDirtyWatch = null;
     this.$beginPhase('$digest');
+
+    if (this.$$applyAsyncId) {
+        clearTimeout(this.$$applyAsyncId);
+        this.$$flushApplyAsync();
+    }
+
     do {
         while (this.$$asyncQuene.length) {
             let asyncTask = this.$$asyncQuene.shift();
@@ -77,16 +85,6 @@ Scope.prototype.$eval = function (expr, locals) {
     return expr(this, locals);
 };
 
-Scope.prototype.$apply = function (expr) {
-    try {
-        this.$beginPhase('$apply');
-        return this.$eval(expr);
-    } finally {
-        this.$clearPhase();
-        this.$digest();
-    }
-};
-
 Scope.prototype.$evalAsync = function (expr) {
     if (!this.$$phase && !this.$$asyncQuene.length) {
         setTimeout(() => {
@@ -99,6 +97,34 @@ Scope.prototype.$evalAsync = function (expr) {
         scope: this,
         expression: expr
     });
+};
+
+Scope.prototype.$apply = function (expr) {
+    try {
+        this.$beginPhase('$apply');
+        return this.$eval(expr);
+    } finally {
+        this.$clearPhase();
+        this.$digest();
+    }
+};
+
+Scope.prototype.$$flushApplyAsync = function () {
+    while (this.$$applyAsyncQueue.length) {
+        this.$$applyAsyncQueue.shift()();
+    }
+    this.$$applyAsyncId = null;
+};
+
+Scope.prototype.$applyAsync = function (expr) {
+    this.$$applyAsyncQueue.push(() => {
+        this.$eval(expr);
+    });
+    if (this.$$applyAsyncId === null) {
+        this.$$applyAsyncId = setTimeout(() => {
+            this.$apply(_.bind(this.$$flushApplyAsync, this));
+        }, 0);
+    }
 };
 
 Scope.prototype.$beginPhase = function (phase) {
