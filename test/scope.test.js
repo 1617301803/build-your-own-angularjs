@@ -654,4 +654,113 @@ describe('Scope', () => {
         scope.$digest();
         expect(didRun).toBe(true);
     });
+
+    test('allows destorying a $watch with a removal function', () => {
+        scope.aValue = 'abc';
+        scope.counter = 0;
+
+        let destroyWatch = scope.$watch(
+            (scope) => { return scope.aValue },
+            (newValue, oldValue, scope) => { scope.counter++; }
+        );
+
+        scope.$digest();
+        expect(scope.counter).toBe(1);
+
+        scope.aValue = 'def';
+        scope.$digest();
+        expect(scope.counter).toBe(2);
+
+        scope.aValue = 'ghi';
+        destroyWatch();
+        scope.$digest();
+        expect(scope.counter).toBe(2);
+    });
+
+    test('allows destroying a $watch during digest', () => {
+        scope.aValue = 'abc';
+
+        let watchCalls = [];
+
+        scope.$watch(
+            (scope) => {
+                watchCalls.push('first');
+                return scope.aValue;
+            }
+        );
+
+        let destoryWatch = scope.$watch(
+            (scope) => {
+                watchCalls.push('second');
+                destoryWatch();
+            }
+        );
+
+        scope.$watch(
+            (scope) => {
+                watchCalls.push('third');
+                destoryWatch();
+            }
+        );
+
+        scope.$digest();
+        expect(watchCalls).toEqual(['first', 'second', 'third', 'first', 'third']);
+    });
+
+    test('allows a $watch to destroy anther during digest', () => {
+        scope.aValue = 'abc';
+        scope.counter = 0;
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                destroyWatch();
+            }
+        );
+
+        let destroyWatch = scope.$watch(
+            (scope) => {
+            },
+            (newValue, oldValue, scope) => {
+            }
+        );
+
+        scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.counter++;
+            }
+        );
+
+        scope.$digest();
+        expect(scope.counter).toBe(1);
+    });
+
+    test('allows destroying serveal $watches during digest', () => {
+        scope.aValue = 'abc';
+        scope.counter = 0;
+
+        let destroyWatch1 = scope.$watch(
+            (scope) => {
+                destroyWatch1();
+                destroyWatch2();
+            }
+        );
+
+        let destroyWatch2 = scope.$watch(
+            (scope) => {
+                return scope.aValue;
+            },
+            (newValue, oldValue, scope) => {
+                scope.counter++;
+            }
+        );
+
+        scope.$digest();
+        expect(scope.counter).toBe(0);
+    });
 });

@@ -4,26 +4,24 @@ import { expect } from './expect';
 
 let scope = new Scope();
 
+scope.aValue = 'abc';
 scope.counter = 0;
 
-scope.$watch(
+let destroyWatch1 = scope.$watch(
     (scope) => {
-        scope.counter++;
-        return scope.aValue;
-    },
-    (newValue, oldValue, scope) => {
+        destroyWatch1();
+        destoryWatch2();
     }
 );
 
-scope.$applyAsync((scope) => {
-    scope.aValue = 'abc';
-});
+let destoryWatch2 = scope.$watch(
+    (scope) => {
+        return scope.aValue;
+    },
+    (newValue, oldValue, scope) => {
+        scope.counter++;
+    }
+);
 
-scope.$applyAsync((scope) => {
-    scope.aValue = 'def';
-});
-
-setTimeout(() => {
-    expect(scope.counter).toBe(2);
-    //done();
-}, 50);
+scope.$digest();
+expect(scope.counter).toBe(0);

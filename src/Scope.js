@@ -23,8 +23,16 @@ Scope.prototype.$watch = function (watchFn, listenerFn, valueEq) {
         last: initWatchValue
     };
 
-    this.$$watchers.push(watcher);
+    this.$$watchers.unshift(watcher);
     this.$$lastDirtyWatch = null;
+
+    return () => {
+        const index = this.$$watchers.indexOf(watcher);
+        if (index >= 0) {
+            this.$$watchers.splice(index, 1);
+            this.$$lastDirtyWatch = null;
+        }
+    };
 };
 
 Scope.prototype.$$areEqual = function (newValue, oldValue, valueEq) {
@@ -39,20 +47,22 @@ Scope.prototype.$$areEqual = function (newValue, oldValue, valueEq) {
 
 Scope.prototype.$$digestOnce = function () {
     let newValue, oldValue, valueEq, dirty;
-    _.forEach(this.$$watchers, (watcher) => {
+    _.forEachRight(this.$$watchers, (watcher) => {
         try {
-            newValue = watcher.watchFn(this);
-            oldValue = watcher.last;
-            valueEq = watcher.valueEq;
-            if (!this.$$areEqual(newValue, oldValue, valueEq)) {
-                this.$$lastDirtyWatch = watcher;
-                watcher.last = (watcher.valueEq ? _.cloneDeep(newValue) : newValue);
-                watcher.listenerFn(newValue,
-                    (oldValue === initWatchValue ? newValue : oldValue),
-                    this);
-                dirty = true;
-            } else if (this.$$lastDirtyWatch === watcher) {
-                return false;
+            if (watcher) {
+                newValue = watcher.watchFn(this);
+                oldValue = watcher.last;
+                valueEq = watcher.valueEq;
+                if (!this.$$areEqual(newValue, oldValue, valueEq)) {
+                    this.$$lastDirtyWatch = watcher;
+                    watcher.last = (watcher.valueEq ? _.cloneDeep(newValue) : newValue);
+                    watcher.listenerFn(newValue,
+                        (oldValue === initWatchValue ? newValue : oldValue),
+                        this);
+                    dirty = true;
+                } else if (this.$$lastDirtyWatch === watcher) {
+                    return false;
+                }
             }
         } catch (e) {
             console.error(e);
