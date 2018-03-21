@@ -172,3 +172,50 @@ Scope.prototype.$clearPhase = function () {
 Scope.prototype.$$postDigest = function (fn) {
     this.$$postDigestQueue.push(fn);
 };
+
+Scope.prototype.$watchGroup = function (watchFns, listenerFn) {
+    let self = this,
+        newValues = [],
+        oldValues = [],
+        changeReactionScheduled = false,
+        firstRun = true;
+
+    if (watchFns.length === 0) {
+        let shouldCall = true;
+        this.$evalAsync(() => {
+            if (shouldCall) {
+                listenerFn(newValues, newValues, this);
+            }
+        });
+
+        return () => {
+            shouldCall = false;
+        };
+    }
+
+    function watchGroupListener() {
+        if (firstRun) {
+            firstRun = false;
+            listenerFn(newValues, newValues, self);
+        } else {
+            listenerFn(newValues, oldValues, self);
+        }
+        changeReactionScheduled = false;
+    }
+    let destoryFunctions = _.map(watchFns, (watchFn, i) => {
+        return this.$watch(watchFn, (newValue, oldValue) => {
+            newValues[i] = newValue;
+            oldValues[i] = oldValue;
+            if (!changeReactionScheduled) {
+                changeReactionScheduled = true;
+                this.$evalAsync(watchGroupListener);
+            }
+        });
+    });
+
+    return () => {
+        _.forEach(destoryFunctions, (destoryFunction) => {
+            destoryFunction();
+        });
+    };
+};

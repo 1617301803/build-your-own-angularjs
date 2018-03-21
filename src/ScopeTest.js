@@ -4,24 +4,21 @@ import { expect } from './expect';
 
 let scope = new Scope();
 
-scope.aValue = 'abc';
-scope.counter = 0;
+let counter = 0;
 
-let destroyWatch1 = scope.$watch(
-    (scope) => {
-        destroyWatch1();
-        destoryWatch2();
-    }
-);
+scope.aValue = 1;
+scope.antherValue = 2;
 
-let destoryWatch2 = scope.$watch(
+scope.$watchGroup([
     (scope) => {
         return scope.aValue;
     },
-    (newValue, oldValue, scope) => {
-        scope.counter++;
+    (scope) => {
+        return scope.anthorValue;
     }
-);
+], (newValues, oldValues, scope) => {
+    counter++;
+});
 
 scope.$digest();
-expect(scope.counter).toBe(0);
+expect(counter).toEqual(1);

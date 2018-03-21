@@ -4,6 +4,10 @@ function Export(expr) {
 }
 
 Export.prototype.toBe = function (value) {
+    console.log(this.expression === value);
+};
+
+Export.prototype.toEqual = function (value) {
     console.log(_.isEqual(this.expression, value));
 };
 

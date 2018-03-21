@@ -763,4 +763,152 @@ describe('Scope', () => {
         scope.$digest();
         expect(scope.counter).toBe(0);
     });
+
+    describe.only('$watchGroup', () => {
+        let scope;
+
+        beforeEach(() => {
+            scope = new Scope();
+        });
+
+        test('takes watches as an array and calls listener with arrays', () => {
+            let gotNewValues, gotOldValues;
+
+            scope.aValue = 1;
+            scope.antherValue = 2;
+
+            scope.$watchGroup([
+                (scope) => {
+                    return scope.aValue;
+                },
+                (scope) => {
+                    return scope.antherValue;
+                }
+            ], (newValues, oldValues, scope) => {
+                gotNewValues = newValues;
+                gotOldValues = oldValues;
+            });
+
+            scope.$digest();
+            expect(gotNewValues).toEqual([1, 2]);
+            expect(gotOldValues).toEqual([1, 2]);
+        });
+
+        test('only calls listener once per digest', () => {
+            let counter = 0;
+
+            scope.aValue = 1;
+            scope.antherValue = 2;
+
+            scope.$watchGroup([
+                (scope) => {
+                    return scope.aValue;
+                },
+                (scope) => {
+                    return scope.antherValue;
+                }
+            ], (newValues, oldValues, scope) => {
+                counter++;
+            });
+
+            scope.$digest();
+            expect(counter).toEqual(1);
+        });
+
+        test('uses the same array of old and new values on first time', () => {
+            let gotNewValues, gotOldValues;
+
+            scope.aValue = 1;
+            scope.antherValue = 2;
+
+            scope.$watchGroup([
+                (scope) => {
+                    return scope.aValue;
+                },
+                (scope) => {
+                    return scope.antherValue;
+                }
+            ], (newValues, oldValues, scope) => {
+                gotNewValues = newValues;
+                gotOldValues = oldValues;
+            });
+
+            scope.$digest();
+            expect(gotNewValues).toBe(gotOldValues);
+        });
+
+        test('uses different arrats for old and new values on subsequent runs', () => {
+            let gotNewValues, gotOldValues;
+
+            scope.aValue = 1;
+            scope.antherValue = 2;
+
+            scope.$watchGroup([
+                (scope) => {
+                    return scope.aValue;
+                },
+                (scope) => {
+                    return scope.antherValue;
+                }
+            ], (newValues, oldValues, scope) => {
+                gotNewValues = newValues;
+                gotOldValues = oldValues;
+            });
+
+            scope.$digest();
+
+            scope.antherValue = 3;
+            scope.$digest();
+
+            expect(gotNewValues).toEqual([1, 3]);
+            expect(gotOldValues).toEqual([1, 2]);
+        });
+
+        test('calls the listener once when the watch array is empty', () => {
+            let gotNewValues, gotOldValues;
+
+            scope.$watchGroup([], (newValues, oldValues, scope) => {
+                gotNewValues = newValues;
+                gotOldValues = oldValues;
+            });
+
+            scope.$digest();
+            expect(gotNewValues).toEqual([]);
+            expect(gotOldValues).toEqual([]);
+        });
+
+        test('can be deregistered', () => {
+            let counter = 0;
+
+            scope.aValue = 1;
+            scope.anotherValue = 2;
+
+            let destroyGroup = scope.$watchGroup([
+                (scope) => { return scope.aValue; },
+                (scope) => { return scope.anotherValue }
+            ], (newValues, oldValues, scope) => {
+                counter++;
+            });
+
+            scope.$digest();
+
+            scope.anotherValue = 3;
+            destroyGroup();
+
+            scope.$digest();
+            expect(counter).toEqual(1);
+        });
+
+        test('dose not call the zero-watch listener when degrgistered first', () => {
+            let counter = 0;
+
+            let destoryGroup = scope.$watchGroup([], (newValues, oldValues, scope) => {
+                counter++;
+            });
+            destoryGroup();
+
+            scope.$digest();
+            expect(counter).toEqual(0);
+        })
+    });
 });
