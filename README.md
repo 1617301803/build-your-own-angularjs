@@ -1,5 +1,5 @@
 # build-your-own-angularjs
 
-## build-your-own-angularjs读书笔记
+学习angular的项目笔记
 
-angular1.x + mocha + chai
+实现angular1.x，测试框架为jest。
