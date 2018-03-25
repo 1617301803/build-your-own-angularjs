@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import './Angular';
 
 function initWatchValue() { }
 
@@ -267,4 +268,92 @@ Scope.prototype.$destroy = function () {
         }
     }
     this.$$watchers = null;
+};
+
+Scope.prototype.$watchCollection = function (watchFn, listenerFn) {
+    let newValue,
+        oldValue,
+        oldLength,
+        veryOldValue,
+        trackVeryOldValue = (listenerFn.length > 0),
+        changeCount = 0,
+        firstRun = true;
+
+    let internalWatchFn = (scope) => {
+        let newLength;
+        newValue = watchFn(scope);
+
+        if (_.isObject(newValue)) {
+            if (_.isArrayLike(newValue)) {
+                if (!_.isArray(oldValue)) {
+                    changeCount++;
+                    oldValue = [];
+                }
+                if (newValue.length !== oldValue.length) {
+                    changeCount++;
+                    oldValue.length = newValue.length;
+                }
+                _.forEach(newValue, (newItem, i) => {
+                    let bothNaN = _.isNaN(newItem) && _.isNaN(oldValue[i]);
+                    if (!bothNaN && newItem !== oldValue[i]) {
+                        changeCount++;
+                        oldValue[i] = newItem;
+                    }
+                });
+            } else {
+                if (!_.isObject(oldValue) || _.isArrayLike(oldValue)) {
+                    changeCount++;
+                    oldValue = {};
+                    oldLength = 0;
+                }
+                newLength = 0;
+                _.forEach(newValue, (newVal, key) => {
+                    newLength++;
+                    if (oldValue.hasOwnProperty(key)) {
+                        let bothNaN = _.isNaN(newVal) && _.isNaN(oldValue[key]);
+                        if (!bothNaN && newVal !== oldValue[key]) {
+                            changeCount++;
+                            oldValue[key] = newVal;
+                        }
+                    } else {
+                        changeCount++;
+                        oldLength++;
+                        oldValue[key] = newVal;
+                    }
+                });
+                if (oldLength > newLength) {
+                    changeCount++;
+                    _.forEach(oldValue, (oldVal, key) => {
+                        if (!newValue.hasOwnProperty(key)) {
+                            oldLength--;
+                            delete oldValue[key];
+                        }
+                    });
+                }
+            }
+        } else {
+            if (!this.$$areEqual(newValue, oldValue, false)) {
+                changeCount++;
+            }
+            oldValue = newValue;
+        }
+
+
+        return changeCount;
+    };
+
+    let internalListenerFn = () => {
+        if (firstRun) {
+            listenerFn(newValue, newValue, this);
+            firstRun = false;
+        } else {
+            listenerFn(newValue, veryOldValue, this);
+        }
+
+        if (trackVeryOldValue) {
+            veryOldValue = _.clone(newValue);
+        }
+    };
+
+    return this.$watch(internalWatchFn, internalListenerFn);
 };
