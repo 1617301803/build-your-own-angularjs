@@ -14,6 +14,7 @@ export function Scope() {
     this.$$postDigestQueue = [];
     this.$root = this;
     this.$$children = [];
+    this.$$listeners = {};
     this.$$phase = null;
 }
 
@@ -254,20 +255,23 @@ Scope.prototype.$new = function (isolated, parent) {
     }
     parent.$$children.push(child);
     child.$$watchers = [];
+    child.$$listeners = {};
     child.$$children = [];
     child.$parent = parent;
     return child;
 };
 
 Scope.prototype.$destroy = function () {
+    this.$broadcast('$destroy');
     if (this.$parent) {
         let siblings = this.$parent.$$children;
-        let indexOfThis = siblings.indexOf(this);
+        var indexOfThis = siblings.indexOf(this);
         if (indexOfThis >= 0) {
             siblings.splice(indexOfThis, 1);
         }
     }
     this.$$watchers = null;
+    this.$$listeners = {};
 };
 
 Scope.prototype.$watchCollection = function (watchFn, listenerFn) {
@@ -356,4 +360,75 @@ Scope.prototype.$watchCollection = function (watchFn, listenerFn) {
     };
 
     return this.$watch(internalWatchFn, internalListenerFn);
+};
+
+Scope.prototype.$on = function (eventName, listener) {
+    let listeners = this.$$listeners[eventName];
+    if (!listeners) {
+        this.$$listeners[eventName] = listeners = [];
+    }
+    listeners.push(listener);
+
+    return () => {
+        var index = listeners.indexOf(listener);
+        if (index >= 0) {
+            listeners[index] = null;
+        }
+    };
+};
+
+Scope.prototype.$emit = function (eventName, ...additionalArgs) {
+    let propagationStopped = false;
+    let event = {
+        name: eventName,
+        targetScope: this,
+        stopPropagation: function () {
+            propagationStopped = true;
+        },
+        preventDefault: function () {
+            event.defaultPrevented = true;
+        }
+    };
+    let listenerArgs = [event].concat(additionalArgs);
+    let scope = this;
+    do {
+        event.currentScope = scope;
+        scope.$$fireEventOnScope(eventName, listenerArgs);
+        scope = scope.$parent;
+    } while (scope && !propagationStopped);
+    return event;
+};
+
+Scope.prototype.$broadcast = function (eventName, ...additionalArgs) {
+    let event = {
+        name: eventName,
+        targetScope: this,
+        preventDefault: function () {
+            event.defaultPrevented = true;
+        }
+    };
+    let listenerArgs = [event].concat(additionalArgs);
+    this.$$everyScope((scope) => {
+        event.currentScope = scope;
+        scope.$$fireEventOnScope(eventName, listenerArgs);
+        return true;
+    });
+    return event;
+};
+
+Scope.prototype.$$fireEventOnScope = function (eventName, listenerArgs) {
+    let listeners = this.$$listeners[eventName] || [];
+    let i = 0;
+    while (i < listeners.length) {
+        if (listeners[i] === null) {
+            listeners.splice(i, 1);
+        } else {
+            try {
+                listeners[i].apply(null, listenerArgs);
+            } catch (e) {
+                console.error(e);
+            }
+            i++;
+        }
+    }
 };

@@ -2,20 +2,21 @@
 import { Scope } from '../src/Scope';
 import { expect } from './expect';
 
-let scope = new Scope();
+let parent,
+    scope,
+    child,
+    isolatedChild;
 
-scope.obj = { length: 42, otherKey: 'abc' };
-scope.counter = 0;
+parent = new Scope();
+scope = parent.$new();
+child = scope.$new();
+isolatedChild = scope.$new(true);
 
-scope.$watchCollection(
-    function (scope) { return scope.obj; },
-    function (newValue, oldValue, scope) {
-        scope.counter++;
-    }
-);
+let listener = function(){
+    
+};
+scope.$on('$destroy', listener);
 
-scope.$digest();
+scope.$destroy();
 
-scope.obj.newKey = 'def';
-scope.$digest();
-expect(scope.counter).toBe(2);
+expect(listener).toHaveBeenCalled();
