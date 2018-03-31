@@ -1,1 +1,3 @@
-import { ScopeTest } from './ScopeTest';
+//import './Scope.test';
+
+import './Parse.test';

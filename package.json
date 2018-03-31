@@ -6,7 +6,8 @@
   "scripts": {
     "eslint": "eslint  ./src --fix",
     "test": "jest",
-    "build": "webpack"
+    "build": "webpack",
+    "start": "webpack-dev-server --open"
   },
   "author": "",
   "license": "ISC",
@@ -24,7 +25,8 @@
     "jest": "^22.4.2",
     "regenerator-runtime": "^0.11.1",
     "webpack": "^4.1.1",
-    "webpack-cli": "^2.0.12"
+    "webpack-cli": "^2.0.12",
+    "webpack-dev-server": "^3.1.1"
   },
   "dependencies": {
     "lodash": "^4.17.5"

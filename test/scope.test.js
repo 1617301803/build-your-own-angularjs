@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { Scope } from '../src/Scope.js';
 
-describe('Scope', () => {
+describe.skip('Scope', () => {
 
     describe.skip('digest', () => {
         let scope;
@@ -1613,7 +1613,7 @@ describe('Scope', () => {
         });
     });
 
-    describe('Event', () => {
+    describe.skip('Event', () => {
         let parent,
             scope,
             child,
