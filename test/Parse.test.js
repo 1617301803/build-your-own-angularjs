@@ -121,8 +121,23 @@ describe("parse", () => {
 
     //两个连续的逗号是不允许的，即使js允许，因为解析成了undefined
     test("will parse an array with trailing commas", () => {
-        var fn = parse('[1, 2, 3,]');
+        let fn = parse('[1, 2, 3,]');
         expect(fn()).toEqual([1, 2, 3]);
+    });
+
+    test("will parse an empty object", () => {
+        let fn = parse('{}');
+        expect(fn()).toEqual({});
+    });
+
+    test("will parse a non-empty object", () => {
+        let fn = parse('{"a key": 1, \'another-key\': 2}');
+        expect(fn()).toEqual({ 'a key': 1, 'another-key': 2 });
+    });
+
+    test("will parse an object with identifier keys", () => {
+        let fn = parse('{a: 1, b: [2, 3], c: {d: 4}}');
+        expect(fn()).toEqual({ a: 1, b: [2, 3], c: { d: 4 } });
     });
 
 });
