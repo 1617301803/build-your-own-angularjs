@@ -109,4 +109,20 @@ describe("parse", () => {
         expect(fn()).toEqual(42);
     });
 
+    test("will parse an empty array", () => {
+        let fn = parse('[]');
+        expect(fn()).toEqual([]);
+    });
+
+    test("will parse a non-empty array", () => {
+        let fn = parse('[1, "two", [3], true]');
+        expect(fn()).toEqual([1, 'two', [3], true]);
+    });
+
+    //两个连续的逗号是不允许的，即使js允许，因为解析成了undefined
+    test("will parse an array with trailing commas", () => {
+        var fn = parse('[1, 2, 3,]');
+        expect(fn()).toEqual([1, 2, 3]);
+    });
+
 });
