@@ -31,7 +31,7 @@ Lexer.prototype.lex = function (text) {
             this.readNumber();
         } else if (this.is('\'"')) {
             this.readString(this.ch);
-        } else if (this.is('[],{}:')) {
+        } else if (this.is('[],{}:.')) {
             this.tokens.push({
                 text: this.ch
             });
@@ -188,11 +188,14 @@ AST.ArrayExpression = 'ArrayExpression';
 AST.ObjectExpression = 'ObjectExpression';
 AST.Property = 'Property';
 AST.Identifier = 'Identifier';
+AST.ThisExpression = 'ThisExpression';
+AST.MemberExpression = 'MemberExpression';
 
 AST.prototype.constants = {
     'null': { type: AST.Literal, value: null },
     'true': { type: AST.Literal, value: true },
-    'false': { type: AST.Literal, value: false }
+    'false': { type: AST.Literal, value: false },
+    'this': { type: AST.ThisExpression }
 };
 
 AST.prototype.ast = function (text) {
@@ -208,17 +211,27 @@ AST.prototype.program = function () {
 };
 
 AST.prototype.primary = function () {
+    let primary;
     if (this.expect('[')) {
-        return this.arrayDeclaration();
+        primary = this.arrayDeclaration();
     } else if (this.expect('{')) {
-        return this.object();
+        primary = this.object();
     } else if (this.constants.hasOwnProperty(this.tokens[0].text)) {
-        return this.constants[this.consume().text];
+        primary = this.constants[this.consume().text];
     } else if (this.peek().identifier) {
-        return this.identifier();
+        primary = this.identifier();
     } else {
-        return this.constant();
+        primary = this.constant();
     }
+    while (this.expect('.')) {
+        primary = {
+            type: AST.MemberExpression,
+            object: primary,
+            property: this.identifier()
+        };
+    }
+
+    return primary;
 };
 
 AST.prototype.peek = function (e) {
@@ -317,7 +330,7 @@ ASTCompiler.prototype.compile = function (text) {
     };
     this.recurse(ast);
 
-    return new Function('s',
+    return new Function('s', 'l',
         (this.state.vars.length ?
             `var ${this.state.vars.join(',')};` :
             ''
@@ -326,6 +339,7 @@ ASTCompiler.prototype.compile = function (text) {
 
 ASTCompiler.prototype.recurse = function (ast) {
     /* eslint-disable */
+    let intoId;
     switch (ast.type) {
         case AST.Program:
             this.state.body.push('return ', this.recurse(ast.body), ';');
@@ -333,12 +347,12 @@ ASTCompiler.prototype.recurse = function (ast) {
         case AST.Literal:
             return this.escape(ast.value);
         case AST.ArrayExpression:
-            let elements = _.map(ast.elements, (element) => {
+            var elements = _.map(ast.elements, (element) => {
                 return this.recurse(element);
             });
             return '[' + elements.join(',') + ']';
         case AST.ObjectExpression:
-            let properties = _.map(ast.properties, (property) => {
+            var properties = _.map(ast.properties, (property) => {
                 let key = property.key.type === AST.Identifier ?
                     property.key.name :
                     this.escape(property.key.value);
@@ -347,8 +361,19 @@ ASTCompiler.prototype.recurse = function (ast) {
             });
             return '{' + properties.join(',') + '}';
         case AST.Identifier:
-            let intoId = this.nextId();
-            this.if_('s', this.assign(intoId, this.nonComputedMumber('s', ast.name)));
+            intoId = this.nextId();
+            this.if_(this.getHasOwnProperty('l', ast.name),
+                this.assign(intoId, this.nonComputedMumber('l', ast.name)));
+            this.if_(this.not(this.getHasOwnProperty('l', ast.name)) + ' && s',
+                this.assign(intoId, this.nonComputedMumber('s', ast.name)));
+            return intoId;
+        case AST.ThisExpression:
+            return 's';
+        case AST.MemberExpression:
+            intoId = this.nextId();
+            var left = this.recurse(ast.object);
+            this.if_(left,
+                this.assign(intoId, this.nonComputedMumber(left, ast.property.name)));
             return intoId;
     }
     /* eslint-enable */
@@ -386,6 +411,14 @@ ASTCompiler.prototype.nextId = function () {
     let id = `v${this.state.nextId++}`;
     this.state.vars.push(id);
     return id;
+};
+
+ASTCompiler.prototype.not = function (e) {
+    return `!(${e})`;
+};
+
+ASTCompiler.prototype.getHasOwnProperty = function (object, property) {
+    return `${object}&&(${this.escape(property)} in ${object})`;
 };
 
 //endregion
