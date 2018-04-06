@@ -23,6 +23,11 @@ Export.prototype.toBeDefined = function () {
     this.log('toBeDefined', result);
 };
 
+Export.prototype.toBeUndefined = function () {
+    var result = (this.expression === undefined);
+    this.log('toBeUndefined', result);
+};
+
 export function expect(expr) {
     return new Export(expr);
 }

@@ -2,5 +2,6 @@ import _ from 'lodash';
 import { parse } from '../src/Parse';
 import { expect } from './expect';
 
-var fn = parse('[1, 2, 3, ,]');
-expect(fn()).toEqual([1, 2, 3,,]);
+let fn = parse('aKey');
+expect(fn({ aKey: 42 })).toBe(42);
+expect(fn({})).toBeUndefined();
