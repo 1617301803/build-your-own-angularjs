@@ -223,28 +223,41 @@ AST.prototype.primary = function () {
     } else {
         primary = this.constant();
     }
-    while (this.expect('.')) {
-        primary = {
-            type: AST.MemberExpression,
-            object: primary,
-            property: this.identifier()
-        };
+    let next;
+    while ((next = this.expect('.', '['))) {
+        if (next.text === '[') {
+            primary = {
+                type: AST.MemberExpression,
+                object: primary,
+                property: this.primary(),
+                computed: true
+            };
+            this.consume(']');
+        } else {
+            primary = {
+                type: AST.MemberExpression,
+                object: primary,
+                property: this.identifier(),
+                computed: false
+            };
+        }
     }
 
     return primary;
 };
 
-AST.prototype.peek = function (e) {
+AST.prototype.peek = function (e1, e2, e3, e4) {
     if (this.tokens.length > 0) {
         let text = this.tokens[0].text;
-        if (text === e || !e) {
+        if (text === e1 || text === e2 || text === e3 || text === e4 ||
+            (!e1 && !e2 && !e3 && !e4)) {
             return this.tokens[0];
         }
     }
 };
 
-AST.prototype.expect = function (e) {
-    let token = this.peek(e);
+AST.prototype.expect = function (e1, e2, e3, e4) {
+    let token = this.peek(e1, e2, e3, e4);
     if (token) {
         return this.tokens.shift();
     }
@@ -363,17 +376,24 @@ ASTCompiler.prototype.recurse = function (ast) {
         case AST.Identifier:
             intoId = this.nextId();
             this.if_(this.getHasOwnProperty('l', ast.name),
-                this.assign(intoId, this.nonComputedMumber('l', ast.name)));
+                this.assign(intoId, this.nonComputedMember('l', ast.name)));
             this.if_(this.not(this.getHasOwnProperty('l', ast.name)) + ' && s',
-                this.assign(intoId, this.nonComputedMumber('s', ast.name)));
+                this.assign(intoId, this.nonComputedMember('s', ast.name)));
             return intoId;
         case AST.ThisExpression:
             return 's';
         case AST.MemberExpression:
             intoId = this.nextId();
             var left = this.recurse(ast.object);
-            this.if_(left,
-                this.assign(intoId, this.nonComputedMumber(left, ast.property.name)));
+            if (ast.computed) {
+                let right = this.recurse(ast.property);
+                this.if_(left,
+                    this.assign(intoId, this.computedMember(left, right)));
+            } else {
+                this.if_(left,
+                    this.assign(intoId, this.nonComputedMember(left, ast.property.name)));
+
+            }
             return intoId;
     }
     /* eslint-enable */
@@ -395,8 +415,12 @@ ASTCompiler.prototype.stringEscapeFn = function (c) {
     return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4);
 };
 
-ASTCompiler.prototype.nonComputedMumber = function (left, right) {
-    return '(' + left + ').' + right;
+ASTCompiler.prototype.computedMember = function (left, right) {
+    return `(${left})[${right}]`;
+};
+
+ASTCompiler.prototype.nonComputedMember = function (left, right) {
+    return `(${left}).${right}`;
 };
 
 ASTCompiler.prototype.if_ = function (test, consequent) {

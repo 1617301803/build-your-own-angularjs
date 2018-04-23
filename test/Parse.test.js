@@ -198,4 +198,26 @@ describe("parse", () => {
         let locals = { aKey: {} };
         expect(fn(scope, locals)).toBeUndefined();
     });
+
+
+    test('parses a simple computed property access', () => {
+        let fn = parse('aKey["anotherKey"]');
+        expect(fn({ aKey: { anotherKey: 42 } })).toBe(42);
+    });
+
+    test('parses a computed numeric array access', () => {
+        let fn = parse('anArray[1]');
+        expect(fn({ anArray: [1, 2, 3] })).toBe(2);
+    });
+
+
+    test('parses a computed access with another key as property', () => {
+        let fn = parse('lock[key]');
+        expect(fn({ key: 'theKey', lock: { theKey: 42 } })).toBe(42);
+    });
+
+    test('parses computed access with another access as property', ()=> {
+        let fn = parse('lock[keys["aKey"]]');
+        expect(fn({ keys: { aKey: 'theKey' }, lock: { theKey: 42 } })).toBe(42);
+    });
 });
