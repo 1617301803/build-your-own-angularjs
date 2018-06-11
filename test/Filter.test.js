@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { parse } from '../src/Parse';
 import { filter, register } from '../src/Filter.js';
 
-describe("filter", function () {
+describe.skip("filter", function () {
 
     it('can be registered and obtained', function () {
         var myFilter = function () { };
