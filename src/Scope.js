@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import './Angular';
+import { parse } from './Parse';
 
 function initWatchValue() { }
 
@@ -19,6 +20,13 @@ export function Scope() {
 }
 
 Scope.prototype.$watch = function (watchFn, listenerFn, valueEq) {
+
+    watchFn = parse(watchFn);
+
+    if (watchFn.$$watchDelegate) {
+        return watchFn.$$watchDelegate(this, listenerFn, valueEq, watchFn);
+    }
+
     let watcher = {
         n: n++,
         watchFn: watchFn,
@@ -129,7 +137,7 @@ Scope.prototype.$digest = function () {
 };
 
 Scope.prototype.$eval = function (expr, locals) {
-    return expr(this, locals);
+    return parse(expr)(this, locals);
 };
 
 Scope.prototype.$evalAsync = function (expr) {
@@ -282,6 +290,8 @@ Scope.prototype.$watchCollection = function (watchFn, listenerFn) {
         trackVeryOldValue = (listenerFn.length > 0),
         changeCount = 0,
         firstRun = true;
+
+    watchFn = parse(watchFn);
 
     let internalWatchFn = (scope) => {
         let newLength;
