@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import { Scope } from '../src/Scope.js';
+import {register,filter} from '../src/Filter';
 
 describe('Scope', () => {
 
@@ -2074,6 +2075,27 @@ describe('Scope', () => {
             scope.$digest();
             expect(values.length).toBe(2);
             expect(values[1]).toEqual([1, 2, 4]);
+        });
+
+        it('allows $stateful filter value to change over time', function (done) {
+            register('withTime', function () {
+                return _.extend(function (v) {
+                    return new Date().toISOString() + ':' + v;
+                }, {
+                        $stateful: true
+                    });
+            });
+            var listener = jest.fn()
+            scope.$watch('42 | withTime', listener);
+            scope.$digest();
+
+            var firstValue = listener.mock.calls[listener.mock.calls.length - 1][0];
+            setTimeout(function () {
+                scope.$digest();
+                var secondValue = listener.mock.calls[listener.mock.calls.length - 1][0];
+                expect(secondValue).not.toEqual(firstValue);
+                done();
+            }, 100);
         });
 
 
