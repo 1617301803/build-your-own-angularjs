@@ -1941,7 +1941,7 @@ describe('Scope', () => {
 
     });
 
-    describe('Expressions And Watches', () => {
+    describe.skip('Expressions And Watches', () => {
 
         let scope;
 
@@ -2097,9 +2097,6 @@ describe('Scope', () => {
                 done();
             }, 100);
         });
-
-
-
     });
 });
 

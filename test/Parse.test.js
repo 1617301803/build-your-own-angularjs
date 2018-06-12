@@ -640,7 +640,7 @@ describe.skip('Operator', () => {
 
 });
 
-describe('Expressions And Watches', () => {
+describe.skip('Expressions And Watches', () => {
     it('returns the function itself when given one', function () {
         var fn = function () { };
         expect(parse(fn)).toBe(fn);
