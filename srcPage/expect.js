@@ -28,6 +28,19 @@ Export.prototype.toBeUndefined = function () {
     this.log('toBeUndefined', result);
 };
 
+Export.prototype.toThrow = function () {
+    var result = false;
+    try {
+        this.expression();
+    } catch (e) {
+        result = true;
+    }
+    finally {
+        this.log('toThrow', result);
+    }
+
+}
+
 export function expect(expr) {
     return new Export(expr);
 }
