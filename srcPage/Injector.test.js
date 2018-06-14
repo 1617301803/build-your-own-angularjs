@@ -6,13 +6,9 @@ delete window.angular;
 setupModuleLoader(window);
 
 var module = angular.module('myModule', []);
-module.provider('a', function AProvider() {
-    this.$get = function () { return 1; };
+var hasRun = false;
+module.config(function () {
+    hasRun = true;
 });
-module.provider('b', function BProvider() {
-    this.$get = function (a) { return a; };
-});
-var injector = createInjector(['myModule']);
-expect(function () {
-    injector.get('b');
-}).toThrow();
+createInjector(['myModule']);
+expect(hasRun).toBe(true);

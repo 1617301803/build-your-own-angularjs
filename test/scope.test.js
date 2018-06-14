@@ -1,10 +1,10 @@
 import _ from 'lodash';
 import { Scope } from '../src/Scope.js';
-import {register,filter} from '../src/Filter';
+import { register, filter } from '../src/Filter';
 
-describe('Scope', () => {
+describe.skip('Scope', () => {
 
-    describe.skip('digest', () => {
+    describe('digest', () => {
         let scope;
 
         beforeEach(() => {
@@ -759,7 +759,7 @@ describe('Scope', () => {
         });
     });
 
-    describe.skip('$watchGroup', () => {
+    describe('$watchGroup', () => {
         let scope;
 
         beforeEach(() => {
@@ -907,7 +907,7 @@ describe('Scope', () => {
         })
     });
 
-    describe.skip("inheritance", () => {
+    describe("inheritance", () => {
 
         test("inherits the parent properties", () => {
             let parent = new Scope();
@@ -1250,7 +1250,7 @@ describe('Scope', () => {
         });
     });
 
-    describe.skip("$watchCollection", () => {
+    describe("$watchCollection", () => {
         let scope;
 
         beforeEach(() => {
@@ -1614,7 +1614,7 @@ describe('Scope', () => {
         });
     });
 
-    describe.skip('Event', () => {
+    describe('Event', () => {
         let parent,
             scope,
             child,
@@ -1941,7 +1941,7 @@ describe('Scope', () => {
 
     });
 
-    describe.skip('Expressions And Watches', () => {
+    describe('Expressions And Watches', () => {
 
         let scope;
 
