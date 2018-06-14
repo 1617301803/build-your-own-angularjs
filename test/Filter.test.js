@@ -1,31 +1,45 @@
 import _ from 'lodash';
 import { parse } from '../src/Parse';
 import { filter, register } from '../src/Filter.js';
+import { publishExternalAPI } from '../src/angular_public';
+import { createInjector } from '../src/Injector';
 
-describe.skip("filter", function () {
+describe("filter", function () {
+
+    beforeEach(function () {
+        publishExternalAPI();
+    });
 
     it('can be registered and obtained', function () {
         var myFilter = function () { };
         var myFilterFactory = function () {
             return myFilter;
         };
-        register('my', myFilterFactory);
-        expect(filter('my')).toBe(myFilter);
+        // register('my', myFilterFactory);
+        // expect(filter('my')).toBe(myFilter);
+        var injector = createInjector(['ng', function ($filterProvider) {
+            $filterProvider.register('my', myFilterFactory);
+        }]);
+        var $filter = injector.get('$filter');
+        expect($filter('my')).toBe(myFilter);
     });
 
     it('allows registering multiple filters with an object', function () {
         var myFilter = function () { };
         var myOtherFilter = function () { };
-        register({
-            my: function () {
-                return myFilter;
-            },
-            myOther: function () {
-                return myOtherFilter;
-            }
-        });
-        expect(filter('my')).toBe(myFilter);
-        expect(filter('myOther')).toBe(myOtherFilter);
+        var injector = createInjector(['ng', function ($filterProvider) {
+            $filterProvider.register({
+                my: function () {
+                    return myFilter;
+                },
+                myOther: function () {
+                    return myOtherFilter;
+                }
+            });
+        }]);
+        var $filter = injector.get('$filter');
+        expect($filter('my')).toBe(myFilter);
+        expect($filter('myOther')).toBe(myOtherFilter);
     });
 
     it('can parse filter expressions', function () {
@@ -72,6 +86,41 @@ describe.skip("filter", function () {
         var fn = parse('"hello" | surround:"*":"!"');
         expect(fn()).toEqual('*hello!');
     });
+
+    it('is available through injector', function () {
+        var myFilter = function () { };
+        var injector = createInjector(['ng', function ($filterProvider) {
+            $filterProvider.register('my', function () {
+                return myFilter;
+            });
+        }]);
+        expect(injector.has('myFilter')).toBe(true);
+        expect(injector.get('myFilter')).toBe(myFilter);
+    });
+
+    it('may have dependencies in factory', function () {
+        var injector = createInjector(['ng', function ($provide, $filterProvider) {
+            $provide.constant('suffix', '!');
+            $filterProvider.register('my', function (suffix) {
+                return function (v) {
+                    return suffix + v;
+                };
+            });
+        }]);
+        expect(injector.has('myFilter')).toBe(true);
+    });
+
+    it('can be registered through module API', function () {
+        var myFilter = function () { };
+        var module = angular.module('myModule', [])
+            .filter('my', function () {
+                return myFilter;
+            });
+        var injector = createInjector(['ng', 'myModule']);
+        expect(injector.has('myFilter')).toBe(true);
+        expect(injector.get('myFilter')).toBe(myFilter);
+    });
+
 
 
 });
