@@ -1,9 +1,10 @@
 import _ from 'lodash';
 import { Scope } from '../src/Scope.js';
+import { register, filter } from '../src/Filter';
 
-describe('Scope', () => {
+describe.skip('Scope', () => {
 
-    describe.skip('digest', () => {
+    describe('digest', () => {
         let scope;
 
         beforeEach(() => {
@@ -758,7 +759,7 @@ describe('Scope', () => {
         });
     });
 
-    describe.skip('$watchGroup', () => {
+    describe('$watchGroup', () => {
         let scope;
 
         beforeEach(() => {
@@ -906,7 +907,7 @@ describe('Scope', () => {
         })
     });
 
-    describe.skip("inheritance", () => {
+    describe("inheritance", () => {
 
         test("inherits the parent properties", () => {
             let parent = new Scope();
@@ -1249,7 +1250,7 @@ describe('Scope', () => {
         });
     });
 
-    describe.skip("$watchCollection", () => {
+    describe("$watchCollection", () => {
         let scope;
 
         beforeEach(() => {
@@ -1613,7 +1614,7 @@ describe('Scope', () => {
         });
     });
 
-    describe.skip('Event', () => {
+    describe('Event', () => {
         let parent,
             scope,
             child,
@@ -2076,8 +2077,26 @@ describe('Scope', () => {
             expect(values[1]).toEqual([1, 2, 4]);
         });
 
+        it('allows $stateful filter value to change over time', function (done) {
+            register('withTime', function () {
+                return _.extend(function (v) {
+                    return new Date().toISOString() + ':' + v;
+                }, {
+                        $stateful: true
+                    });
+            });
+            var listener = jest.fn()
+            scope.$watch('42 | withTime', listener);
+            scope.$digest();
 
-
+            var firstValue = listener.mock.calls[listener.mock.calls.length - 1][0];
+            setTimeout(function () {
+                scope.$digest();
+                var secondValue = listener.mock.calls[listener.mock.calls.length - 1][0];
+                expect(secondValue).not.toEqual(firstValue);
+                done();
+            }, 100);
+        });
     });
 });
 

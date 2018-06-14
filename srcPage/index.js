@@ -1,3 +1,3 @@
 //import './Scope.test';
 
-import './Filter.test';
+import './Injector.test';

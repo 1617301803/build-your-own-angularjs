@@ -640,7 +640,7 @@ describe.skip('Operator', () => {
 
 });
 
-describe('Expressions And Watches', () => {
+describe.skip('Expressions And Watches', () => {
     it('returns the function itself when given one', function () {
         var fn = function () { };
         expect(parse(fn)).toBe(fn);
@@ -777,6 +777,22 @@ describe('Expressions And Watches', () => {
         expect(parse('true ? a : 2').constant).toBe(false);
         expect(parse('true ? 1 : b').constant).toBe(false);
         expect(parse('a ? b : c').constant).toBe(false);
+    });
+
+    it('allows calling assign on identifier expressions', function () {
+        var fn = parse('anAttribute');
+        expect(fn.assign).toBeDefined();
+        var scope = {};
+        fn.assign(scope, 42);
+        expect(scope.anAttribute).toBe(42);
+    });
+
+    it('allows calling assign on member expressions', function () {
+        var fn = parse('anObject.anAttribute');
+        expect(fn.assign).toBeDefined();
+        var scope = {};
+        fn.assign(scope, 42); 
+        expect(scope.anObject).toEqual({ anAttribute: 42 });
     });
 
 });
