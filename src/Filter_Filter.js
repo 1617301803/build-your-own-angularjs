@@ -3,6 +3,8 @@ import { filter, register } from './Filter';
 
 _.any = _.some;
 
+export { filterFilter };
+
 function filterFilter() {
     return function (array, filterExpr, comparator) {
         var predicateFn;
@@ -82,8 +84,3 @@ function deepCompare(actual, expected, comparator, matchAnyProperty, inWildcard)
         return comparator(actual, expected);
     }
 }
-
-
-
-
-register('filter', filterFilter);

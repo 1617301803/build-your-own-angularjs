@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { hashKey, HashMap } from '../src/Apis';
-describe.skip('apis', function () {
+describe('apis', function () {
 
     describe('hashKey', function () {
         it('is undefined: undefined for undefined', function () {

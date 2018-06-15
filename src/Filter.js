@@ -1,21 +1,5 @@
 import _ from 'lodash';
-var filters = {};
-
-function register(name, factory) {
-    if (_.isObject(name)) {
-        return _.map(name, function (factory, name) {
-            return register(name, factory);
-        });
-    } else {
-        var filter = factory();
-        filters[name] = filter;
-        return filter;
-    }
-}
-
-function filter(name) {
-    return filters[name];
-}
+import { filterFilter } from './Filter_Filter';
 
 function $FilterProvider($provide) {
 
@@ -34,7 +18,9 @@ function $FilterProvider($provide) {
             return $injector.get(name + 'Filter');
         };
     }];
+
+    this.register('filter', filterFilter);
 }
 $FilterProvider.$inject = ['$provide']
 
-export { register, filter, $FilterProvider };
+export { $FilterProvider };

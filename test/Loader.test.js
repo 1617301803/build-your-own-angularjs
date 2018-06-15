@@ -1,6 +1,6 @@
 import { setupModuleLoader } from '../src/Loader';
 
-describe.skip('loader', function () {
+describe('loader', function () {
     beforeEach(function () {
         delete window.angular;
     });

@@ -3,7 +3,7 @@ import _ from 'lodash';
 import { setupModuleLoader } from '../src/loader';
 import { createInjector } from '../src/Injector';
 
-describe.skip('injector', function () {
+describe('injector', function () {
     beforeEach(function () {
         delete window.angular;
         setupModuleLoader(window);
