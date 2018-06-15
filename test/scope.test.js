@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { publishExternalAPI } from '../src/angular_public';
 import { createInjector } from '../src/Injector';
 
-describe('Scope', () => {
+describe.skip('Scope', () => {
 
     describe('digest', () => {
         let scope;
