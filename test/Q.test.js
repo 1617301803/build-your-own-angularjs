@@ -221,4 +221,51 @@ describe.only("$q", function () {
         $rootScope.$apply();
         expect(rejectSpy).toHaveBeenCalled();
     });
+
+    it('invokes a finally handler when fulfilled', function () {
+        var d = $q.defer();
+        var finallySpy = jest.fn()
+
+        d.promise.finally(finallySpy);
+        d.resolve(42);
+        $rootScope.$apply();
+        expect(finallySpy).toHaveBeenCalledWith();
+    });
+
+    it('invokes a finally handler when rejected', function () {
+        var d = $q.defer();
+        var finallySpy = jest.fn();
+
+        d.promise.finally(finallySpy);
+        d.reject('fail');
+        $rootScope.$apply();
+        expect(finallySpy).toHaveBeenCalledWith();
+    });
+
+    it('allows chaining handlers', function () {
+        var d = $q.defer();
+        var fulfilledSpy = jest.fn();
+        d.promise.then(function (result) {
+            return result + 1;
+        }).then(function (result) {
+            return result * 2;
+        }).then(fulfilledSpy);
+        d.resolve(20);
+        $rootScope.$apply();
+        expect(fulfilledSpy).toHaveBeenCalledWith(42);
+    });
+
+    it('does not modify original resolution in chains', function () {
+        var d = $q.defer();
+        var fulfilledSpy = jest.fn()
+        d.promise.then(function (result) {
+            return result + 1;
+        }).then(function (result) {
+            return result * 2;
+        });
+        d.promise.then(fulfilledSpy);
+        d.resolve(20);
+        $rootScope.$apply();
+        expect(fulfilledSpy).toHaveBeenCalledWith(20);
+    });
 });

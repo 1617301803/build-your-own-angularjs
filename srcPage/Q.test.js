@@ -16,21 +16,13 @@ $rootScope = injector.get('$rootScope');
 
 
 var d = $q.defer();
-
-var firstSpy = function () {
-    debugger
-};
-var secondSpy = function () {
+var fulfilledSpy = function () {
     debugger;
 };
-
-d.promise.then(firstSpy);
-d.resolve(42);
-$rootScope.$apply();
-
-
-d.promise.then(secondSpy);
-
-
-
+d.promise.then(function (result) {
+    return result + 1;
+}).then(function (result) {
+    return result * 2;
+}).then(fulfilledSpy);
+d.resolve(20);
 $rootScope.$apply();
