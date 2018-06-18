@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { publishExternalAPI } from '../src/angular_public';
 import { createInjector } from '../src/Injector';
-describe.only("$q", function () {
+describe("$q", function () {
     var $q, $$q, $rootScope;
 
     beforeEach(function () {

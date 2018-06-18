@@ -1,3 +1,3 @@
 //import './Scope.test';
 
-import './Q.test';
+import './Compile.test';

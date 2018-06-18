@@ -22,6 +22,7 @@
     "eslint-plugin-promise": "^3.7.0",
     "eslint-plugin-standard": "^3.0.1",
     "html-webpack-plugin": "^3.0.6",
+    "jQuery": "^1.7.4",
     "jest": "^22.4.2",
     "regenerator-runtime": "^0.11.1",
     "webpack": "^4.1.1",
