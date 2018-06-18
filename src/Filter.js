@@ -21,6 +21,6 @@ function $FilterProvider($provide) {
 
     this.register('filter', filterFilter);
 }
-$FilterProvider.$inject = ['$provide']
+$FilterProvider.$inject = ['$provide'];
 
 export { $FilterProvider };

@@ -16,13 +16,16 @@ $rootScope = injector.get('$rootScope');
 
 
 var d = $q.defer();
-var fulfilledSpy = function () {
+var progressSpy = function () {
     debugger;
-};
-d.promise.then(function (result) {
-    return result + 1;
-}).then(function (result) {
-    return result * 2;
-}).then(fulfilledSpy);
-d.resolve(20);
+}
+d.promise
+    .then(_.noop)
+    .then(null, null, function (progress) {
+        return '***' + progress + '***';
+    })
+    .catch(_.noop)
+    .then(null, null, progressSpy);
+d.notify('working...');
 $rootScope.$apply();
+expect(progressSpy).toHaveBeenCalledWith('***working...***');

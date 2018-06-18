@@ -176,7 +176,7 @@ function createInjector(modulesToLoad, strictDi) {
         instanceInjector.invoke(runBlock);
     });
 
-    return instanceInjector
+    return instanceInjector;
 }
 
 export { createInjector };
