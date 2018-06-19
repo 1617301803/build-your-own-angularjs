@@ -1,5 +1,6 @@
 import $ from 'jQuery';
 import _ from 'lodash';
+
 export function $CompileProvider($provide) {
 
     var hasDirectives = {};
@@ -14,7 +15,11 @@ export function $CompileProvider($provide) {
                 hasDirectives[name] = [];
                 $provide.factory(name + 'Directive', ['$injector', function ($injector) {
                     var factories = hasDirectives[name];
-                    return _.map(factories, $injector.invoke);
+                    return _.map(factories, function (factory) {
+                        var directive = $injector.invoke(factory);
+                        directive.restrict = directive.restrict || 'EA';
+                        return directive;
+                    });
                 }]);
             }
             hasDirectives[name].push(directiveFactory);
@@ -41,10 +46,35 @@ export function $CompileProvider($provide) {
             });
         }
 
+        var PREFIX_REGEXP = /(x[\:\-_]|data[\:\-_])/i;
+        function directiveNormalize(name) {
+            return _.camelCase(name.replace(PREFIX_REGEXP, ''));
+        }
+
         function collectDirectives(node) {
             var directives = [];
-            var normalizedNodeName = _.camelCase(nodeName(node).toLowerCase());
-            addDirective(directives, normalizedNodeName);
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                var normalizedNodeName = directiveNormalize(nodeName(node).toLowerCase());
+                addDirective(directives, normalizedNodeName, 'E');
+                _.forEach(node.attributes, function (attr) {
+                    var normalizedAttrName = directiveNormalize(attr.name.toLowerCase());
+                    if (/^ngAttr[A-Z]/.test(normalizedAttrName)) {
+                        normalizedAttrName =
+                            normalizedAttrName[6].toLowerCase() +
+                            normalizedAttrName.substring(7);
+                    }
+                    addDirective(directives, normalizedAttrName, 'A');
+                });
+                _.forEach(node.classList, function (cls) {
+                    var normalizedClassName = directiveNormalize(cls);
+                    addDirective(directives, normalizedClassName, 'C');
+                });
+            } else if (node.nodeType === Node.COMMENT_NODE) {
+                var match = /^\s*directive\:\s*([\d\w\-_]+)/.exec(node.nodeValue);
+                if (match) {
+                    addDirective(directives, directiveNormalize(match[1]), 'M');
+                }
+            }
             return directives;
         }
 
@@ -52,9 +82,13 @@ export function $CompileProvider($provide) {
             return element.nodeName ? element.nodeName : element[0].nodeName;
         }
 
-        function addDirective(directives, name) {
+        function addDirective(directives, name, mode) {
             if (hasDirectives.hasOwnProperty(name)) {
-                directives.push.apply(directives, $injector.get(name + 'Directive'));
+                var foundDirectives = $injector.get(name + 'Directive');
+                var applicableDirectives = _.filter(foundDirectives, function (dir) {
+                    return dir.restrict.indexOf(mode) !== -1;
+                });
+                directives.push.apply(directives, applicableDirectives);
             }
         }
 
