@@ -19,9 +19,12 @@ export function $CompileProvider($provide) {
                         var directive = $injector.invoke(factory);
                         directive.restrict = directive.restrict || 'EA';
                         directive.priority = directive.priority || 0;
+                        if (directive.link && !directive.compile) {
+                            directive.compile = _.constant(directive.link);
+                        }
                         directive.name = directive.name || name;
                         directive.index = i;
-                        return directive;
+                        return directive; return directive;
                     });
                 }]);
             }
@@ -92,6 +95,7 @@ export function $CompileProvider($provide) {
         Attributes.prototype.$addClass = function (classVal) {
             this.$$element.addClass(classVal);
         };
+
         Attributes.prototype.$removeClass = function (classVal) {
             this.$$element.removeClass(classVal);
         };
@@ -110,18 +114,55 @@ export function $CompileProvider($provide) {
         };
 
         function compile($compileNodes) {
-            return compileNodes($compileNodes);
+            var compositeLinkFn = compileNodes($compileNodes);
+
+            return function publicLinkFn(scope) {
+                $compileNodes.data('$scope', scope);
+                compositeLinkFn(scope, $compileNodes);
+            };
         }
 
         function compileNodes($compileNodes) {
-            _.forEach($compileNodes, function (node) {
+            var linkFns = [];
+            _.forEach($compileNodes, function (node, i) {
                 var attrs = new Attributes($(node));
                 var directives = collectDirectives(node, attrs);
-                var terminal = applyDirectivesToNode(directives, node, attrs);
-                if (!terminal && node.childNodes && node.childNodes.length) {
-                    compileNodes(node.childNodes);
+                var nodeLinkFn;
+                if (directives.length) {
+                    nodeLinkFn = applyDirectivesToNode(directives, node, attrs);
+                }
+                var childLinkFn;
+                if ((!nodeLinkFn || !nodeLinkFn.terminal) &&
+                    node.childNodes && node.childNodes.length) {
+                    childLinkFn = compileNodes(node.childNodes);
+                }
+                if (nodeLinkFn || childLinkFn) {
+                    linkFns.push({
+                        nodeLinkFn: nodeLinkFn,
+                        childLinkFn: childLinkFn,
+                        idx: i
+                    });
                 }
             });
+
+            function compositeLinkFn(scope, linkNodes) {
+                _.forEach(linkFns, function (linkFn) {
+                    if (linkFn.nodeLinkFn) {
+                        linkFn.nodeLinkFn(
+                            linkFn.childLinkFn,
+                            scope,
+                            linkNodes[linkFn.idx]
+                        );
+                    } else {
+                        linkFn.childLinkFn(
+                            scope,
+                            linkNodes[linkFn.idx].childNodes
+                        );
+                    }
+                });
+            }
+
+            return compositeLinkFn;
         }
 
         var PREFIX_REGEXP = /(x[\:\-_]|data[\:\-_])/i;
@@ -284,10 +325,12 @@ export function $CompileProvider($provide) {
             }
             return $(nodes);
         }
+
         function applyDirectivesToNode(directives, compileNode, attrs) {
             var $compileNode = $(compileNode);
             var terminalPriority = -Number.MAX_VALUE;
             var terminal = false;
+            var linkFns = [];
             _.forEach(directives, function (directive) {
                 if (directive.$$start) {
                     $compileNode = groupScan(compileNode, directive.$$start, directive.$$end);
@@ -298,14 +341,28 @@ export function $CompileProvider($provide) {
                 }
 
                 if (directive.compile) {
-                    directive.compile($compileNode, attrs);
+                    var linkFn = directive.compile($compileNode, attrs);
+                    if (linkFn) {
+                        linkFns.push(linkFn);
+                    }
                 }
                 if (directive.terminal) {
                     terminal = true;
                     terminalPriority = directive.priority;
                 }
             });
-            return terminal;
+
+            function nodeLinkFn(childLinkFn, scope, linkNode) {
+                if (childLinkFn) {
+                    childLinkFn(scope, linkNode.childNodes);
+                }
+                _.forEach(linkFns, function (linkFn) {
+                    var $element = $(linkNode);
+                    linkFn(scope, $element, attrs);
+                });
+            }
+            nodeLinkFn.terminal = terminal;
+            return nodeLinkFn;
         }
 
         return compile;
