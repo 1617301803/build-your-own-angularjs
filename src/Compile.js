@@ -136,6 +136,9 @@ export function $CompileProvider($provide) {
                     node.childNodes && node.childNodes.length) {
                     childLinkFn = compileNodes(node.childNodes);
                 }
+                if (nodeLinkFn && nodeLinkFn.scope) {
+                    attrs.$$element.addClass('ng-scope');
+                }
                 if (nodeLinkFn || childLinkFn) {
                     linkFns.push({
                         nodeLinkFn: nodeLinkFn,
@@ -146,17 +149,28 @@ export function $CompileProvider($provide) {
             });
 
             function compositeLinkFn(scope, linkNodes) {
+                var stableNodeList = [];
                 _.forEach(linkFns, function (linkFn) {
+                    var nodeIdx = linkFn.idx;
+                    stableNodeList[nodeIdx] = linkNodes[nodeIdx];
+                });
+
+                _.forEach(linkFns, function (linkFn) {
+                    var node = stableNodeList[linkFn.idx];
                     if (linkFn.nodeLinkFn) {
+                        if (linkFn.nodeLinkFn.scope) {
+                            scope = scope.$new();
+                            $(node).data('$scope', scope);
+                        }
                         linkFn.nodeLinkFn(
                             linkFn.childLinkFn,
                             scope,
-                            linkNodes[linkFn.idx]
+                            node
                         );
                     } else {
                         linkFn.childLinkFn(
                             scope,
-                            linkNodes[linkFn.idx].childNodes
+                            node.childNodes
                         );
                     }
                 });
@@ -326,11 +340,38 @@ export function $CompileProvider($provide) {
             return $(nodes);
         }
 
+        function groupElementsLinkFnWrapper(linkFn, attrStart, attrEnd) {
+            return function (scope, element, attrs) {
+                var group = groupScan(element[0], attrStart, attrEnd);
+                return linkFn(scope, group, attrs);
+            };
+        }
+
         function applyDirectivesToNode(directives, compileNode, attrs) {
             var $compileNode = $(compileNode);
             var terminalPriority = -Number.MAX_VALUE;
             var terminal = false;
-            var linkFns = [];
+            var preLinkFns = [], postLinkFns = [];
+            var newScopeDirective, newIsolateScopeDirective;
+
+            function addLinkFns(preLinkFn, postLinkFn, attrStart, attrEnd, isolateScope) {
+                if (preLinkFn) {
+                    if (attrStart) {
+                        preLinkFn = groupElementsLinkFnWrapper(preLinkFn, attrStart, attrEnd);
+                    }
+                    preLinkFn.isolateScope = isolateScope;
+                    preLinkFns.push(preLinkFn);
+                }
+                if (postLinkFn) {
+                    if (attrStart) {
+                        postLinkFn = groupElementsLinkFnWrapper(postLinkFn, attrStart, attrEnd);
+                    }
+                    postLinkFn.isolateScope = isolateScope;
+                    postLinkFns.push(postLinkFn);
+                }
+            }
+
+
             _.forEach(directives, function (directive) {
                 if (directive.$$start) {
                     $compileNode = groupScan(compileNode, directive.$$start, directive.$$end);
@@ -340,10 +381,29 @@ export function $CompileProvider($provide) {
                     return false;
                 }
 
+                if (directive.scope) {
+                    if (_.isObject(directive.scope)) {
+                        if (newIsolateScopeDirective || newScopeDirective) {
+                            throw 'Multiple directives asking for new/inherited scope';
+                        }
+                        newIsolateScopeDirective = directive;
+                    } else {
+                        if (newIsolateScopeDirective) {
+                            throw 'Multiple directives asking for new/inherited scope';
+                        }
+                        newScopeDirective = newScopeDirective || directive;
+                    }
+                }
+
                 if (directive.compile) {
                     var linkFn = directive.compile($compileNode, attrs);
-                    if (linkFn) {
-                        linkFns.push(linkFn);
+                    var isolateScope = (directive === newIsolateScopeDirective);
+                    var attrStart = directive.$$start;
+                    var attrEnd = directive.$$end;
+                    if (_.isFunction(linkFn)) {
+                        addLinkFns(null, linkFn, attrStart, attrEnd, isolateScope);
+                    } else if (linkFn) {
+                        addLinkFns(linkFn.pre, linkFn.post, attrStart, attrEnd, isolateScope);
                     }
                 }
                 if (directive.terminal) {
@@ -353,15 +413,28 @@ export function $CompileProvider($provide) {
             });
 
             function nodeLinkFn(childLinkFn, scope, linkNode) {
+                var $element = $(linkNode);
+
+                var isolateScope;
+                if (newIsolateScopeDirective) {
+                    isolateScope = scope.$new(true);
+                    $element.addClass('ng-isolate-scope');
+                    $element.data('$isolateScope', isolateScope);
+                }
+
+                _.forEach(preLinkFns, function (linkFn) {
+                    linkFn(linkFn.isolateScope ? isolateScope : scope, $element, attrs);
+                });
                 if (childLinkFn) {
                     childLinkFn(scope, linkNode.childNodes);
                 }
-                _.forEach(linkFns, function (linkFn) {
-                    var $element = $(linkNode);
-                    linkFn(scope, $element, attrs);
+                _.forEachRight(postLinkFns, function (linkFn) {
+                    linkFn(linkFn.isolateScope ? isolateScope : scope, $element, attrs);
                 });
             }
             nodeLinkFn.terminal = terminal;
+            nodeLinkFn.scope = newScopeDirective && newScopeDirective.scope;
+
             return nodeLinkFn;
         }
 
