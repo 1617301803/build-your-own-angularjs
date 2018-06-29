@@ -1,6 +1,20 @@
 import $ from 'jQuery';
 import _ from 'lodash';
 
+function parseIsolateBindings(scope) {
+    var bindings = {};
+    _.forEach(scope, function (definition, scopeName) {
+        var match = definition.match(/\s*([@&]|=(\*?))(\??)\s*(\w*)\s*/);
+        bindings[scopeName] = {
+            mode: match[1][0],
+            collection: match[2] === '*',
+            optional: match[3],
+            attrName: match[4] || scopeName
+        };
+    });
+    return bindings;
+}
+
 export function $CompileProvider($provide) {
 
     var hasDirectives = {};
@@ -22,6 +36,9 @@ export function $CompileProvider($provide) {
                         if (directive.link && !directive.compile) {
                             directive.compile = _.constant(directive.link);
                         }
+                        if (_.isObject(directive.scope)) {
+                            directive.$$isolateBindings = parseIsolateBindings(directive.scope);
+                        }
                         directive.name = directive.name || name;
                         directive.index = i;
                         return directive; return directive;
@@ -36,7 +53,7 @@ export function $CompileProvider($provide) {
         }
     };
 
-    this.$get = ['$injector', '$rootScope', function ($injector, $rootScope) {
+    this.$get = ['$injector', '$parse', '$rootScope', function ($injector, $parse, $rootScope) {
 
         function Attributes(element) {
             this.$$element = element;
@@ -420,6 +437,56 @@ export function $CompileProvider($provide) {
                     isolateScope = scope.$new(true);
                     $element.addClass('ng-isolate-scope');
                     $element.data('$isolateScope', isolateScope);
+                    _.forEach(newIsolateScopeDirective.$$isolateBindings,
+                        function (definition, scopeName) {
+                            var attrName = definition.attrName;
+                            switch (definition.mode) {
+                                case '@':
+                                    attrs.$observe(attrName, function (newAttrValue) {
+                                        isolateScope[scopeName] = newAttrValue;
+                                    });
+                                    if (attrs[attrName]) {
+                                        isolateScope[scopeName] = attrs[attrName];
+                                    }
+                                    break;
+                                case '=':
+                                    if (definition.optional && !attrs[attrName]) {
+                                        break;
+                                    }
+                                    var parentGet = $parse(attrs[attrName]);
+                                    var lastValue = isolateScope[scopeName] = parentGet(scope);
+                                    var parentValueWatch = function () {
+                                        var parentValue = parentGet(scope);
+                                        if (isolateScope[scopeName] !== parentValue) {
+                                            if (parentValue !== lastValue) {
+                                                isolateScope[scopeName] = parentValue;
+                                            } else {
+                                                parentValue = isolateScope[scopeName];
+                                                parentGet.assign(scope, parentValue);
+                                            }
+                                        }
+                                        lastValue = parentValue;
+                                        return lastValue;
+                                    };
+                                    var unwatch;
+                                    if (definition.collection) {
+                                        unwatch = scope.$watchCollection(attrs[attrName], parentValueWatch);
+                                    } else {
+                                        unwatch = scope.$watch(parentValueWatch);
+                                    }
+                                    isolateScope.$on('$destroy', unwatch);
+                                    break;
+                                case '&':
+                                    var parentExpr = $parse(attrs[attrName]);
+                                    if (parentExpr === _.noop && definition.optional) {
+                                        break;
+                                    }
+                                    isolateScope[scopeName] = function (locals) {
+                                        return parentExpr(scope, locals);
+                                    };
+                                    break;
+                            }
+                        });
                 }
 
                 _.forEach(preLinkFns, function (linkFn) {
